@@ -177,7 +177,121 @@ $( document ).ready(function() {
 		console.log("Sending power command for AC");
 		console.log(JSON.stringify(json_arr));
 	});
-	
+
+	//Powerful
+	$('#powerful-button').change(function(){
+		console.log("Powerful switch changed: now " + $(this).is(':checked'));
+		$("label[for='powerful-button']").removeClass("btn-danger btn-success");
+		if($(this).prop("checked")){
+			$("label[for='powerful-button']").addClass("btn-success");
+		} else {
+			$("label[for='powerful-button']").addClass("btn-danger");
+		}
+		var json_arr = {};
+		json_arr["command"] = "acPowerful";
+		json_arr["powerful"] = $('#powerful-button').prop("checked");
+
+		ws.send(JSON.stringify(json_arr));
+
+		console.log("Sending powerful command for AC");
+		console.log(JSON.stringify(json_arr));
+	});
+
+	//Comfort
+	$('#comfort-button').change(function(){
+		console.log("Comfort switch changed: now " + $(this).is(':checked'));
+		$("label[for='comfort-button']").removeClass("btn-danger btn-success");
+		if($(this).prop("checked")){
+			$("label[for='comfort-button']").addClass("btn-success");
+		} else {
+			$("label[for='comfort-button']").addClass("btn-danger");
+		}
+		var json_arr = {};
+		json_arr["command"] = "acComfort";
+		json_arr["comfort"] = $('#comfort-button').prop("checked");
+
+		ws.send(JSON.stringify(json_arr));
+
+		console.log("Sending comfort command for AC");
+		console.log(JSON.stringify(json_arr));
+	});
+
+	//Quiet
+	$('#quiet-button').change(function(){
+		console.log("Quiet switch changed: now " + $(this).is(':checked'));
+		$("label[for='quiet-button']").removeClass("btn-danger btn-success");
+		if($(this).prop("checked")){
+			$("label[for='quiet-button']").addClass("btn-success");
+		} else {
+			$("label[for='quiet-button']").addClass("btn-danger");
+		}
+		var json_arr = {};
+		json_arr["command"] = "acQuiet";
+		json_arr["quiet"] = $('#quiet-button').prop("checked");
+
+		ws.send(JSON.stringify(json_arr));
+
+		console.log("Sending quiet command for AC");
+		console.log(JSON.stringify(json_arr));
+	});
+
+	//Streamer
+	$('#streamer-button').change(function(){
+		console.log("Streamer switch changed: now " + $(this).is(':checked'));
+		$("label[for='streamer-button']").removeClass("btn-danger btn-success");
+		if($(this).prop("checked")){
+			$("label[for='streamer-button']").addClass("btn-success");
+		} else {
+			$("label[for='streamer-button']").addClass("btn-danger");
+		}
+		var json_arr = {};
+		json_arr["command"] = "acStreamer";
+		json_arr["streamer"] = $('#streamer-button').prop("checked");
+
+		ws.send(JSON.stringify(json_arr));
+
+		console.log("Sending streamer command for AC");
+		console.log(JSON.stringify(json_arr));
+	});
+
+	//Sensor
+	$('#sensor-button').change(function(){
+		console.log("Sensor switch changed: now " + $(this).is(':checked'));
+		$("label[for='sensor-button']").removeClass("btn-danger btn-success");
+		if($(this).prop("checked")){
+			$("label[for='sensor-button']").addClass("btn-success");
+		} else {
+			$("label[for='sensor-button']").addClass("btn-danger");
+		}
+		var json_arr = {};
+		json_arr["command"] = "acSensor";
+		json_arr["sensor"] = $('#sensor-button').prop("checked");
+
+		ws.send(JSON.stringify(json_arr));
+
+		console.log("Sending sensor command for AC");
+		console.log(JSON.stringify(json_arr));
+	});
+
+	//Econo
+	$('#econo-button').change(function(){
+		console.log("Econo switch changed: now " + $(this).is(':checked'));
+		$("label[for='econo-button']").removeClass("btn-danger btn-success");
+		if($(this).prop("checked")){
+			$("label[for='econo-button']").addClass("btn-success");
+		} else {
+			$("label[for='econo-button']").addClass("btn-danger");
+		}
+		var json_arr = {};
+		json_arr["command"] = "acEcono";
+		json_arr["econo"] = $('#econo-button').prop("checked");
+
+		ws.send(JSON.stringify(json_arr));
+
+		console.log("Sending econo command for AC");
+		console.log(JSON.stringify(json_arr));
+	});
+
 	//mode radio
 	$("input[type='radio'][name='mode']").on('change', function(e){
 		var json_arr = {};
@@ -262,11 +376,36 @@ $( document ).ready(function() {
 				$('#outTemp').text(data['temp_outside']/10.0 + "°C");
 				$('#coilTemp').text(data['temp_coil']/10.0 + "°C");
 				$('#fanSpeed').text(data['fan_rpm'] + " rpm");
+				$('#demand').text(data['demand'] + "%");
 				
 				if ( data["idle"] == true ) $("#compressor").removeClass('btn-warning').addClass('btn-light');
 				else $("#compressor").removeClass('btn-light').addClass('btn-warning');
 
-				
+				//powerful
+				$('#powerful-button').prop("checked", data["powerful"]);
+				if ( data["powerful"] == true ) $("label[for='powerful-button']").removeClass('btn-danger').addClass('btn-success');
+				else $("label[for='powerful-button']").removeClass('btn-success').addClass('btn-danger');
+
+				//comfort
+				$('#comfort-button').prop("checked", data["comfort"]);
+				if ( data["comfort"] == true ) $("label[for='comfort-button']").removeClass('btn-danger').addClass('btn-success');
+				else $("label[for='comfort-button']").removeClass('btn-success').addClass('btn-danger');
+
+				//quiet
+				$('#quiet-button').prop("checked", data["quiet"]);
+				if ( data["quiet"] == true ) $("label[for='quiet-button']").removeClass('btn-danger').addClass('btn-success');
+				else $("label[for='quiet-button']").removeClass('btn-success').addClass('btn-danger');
+
+				//streamer
+				$('#streamer-button').prop("checked", data["streamer"]);
+				if ( data["streamer"] == true ) $("label[for='streamer-button']").removeClass('btn-danger').addClass('btn-success');
+				else $("label[for='streamer-button']").removeClass('btn-success').addClass('btn-danger');
+
+				//sensor
+				$('#sensor-button').prop("checked", data["sensor"]);
+				if ( data["sensor"] == true ) $("label[for='sensor-button']").removeClass('btn-danger').addClass('btn-success');
+				else $("label[for='sensor-button']").removeClass('btn-success').addClass('btn-danger');
+
 			} else if (data["type"] == "config"){
 				cfgPeriod.update({
 					from: data["period"]

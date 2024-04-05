@@ -145,10 +145,19 @@ struct {
   int16_t temp_coil = 0;
   uint16_t fan_rpm = 0;
   bool idle = true;
+  bool powerful = false;
+  bool comfort = false;
+  bool quiet = false;
+  bool streamer = false;
+  bool sensor = false;
+  bool led = false;
+  int16_t demand = 100;
+  bool econo = false;
+  uint32_t wh;
 } acValues;
 
 //variable and consts for states-machine
-const std::vector<std::string> acQueries = {"F1", "F5", "RH", "RI", "Ra", "RL", "Rd"}; //list of good used ac queries
+const std::vector<std::string> acQueries = {"F1", "F5", "F6", "F7", "FM", "FP", "RH", "RI", "Ra", "RL", "Rd"}; //list of good used ac queries
 uint8_t state = 0, cmdState = 0; //machine state indexes
 uint8_t acQuery = 0; //ac query index
 uint32_t updateStartTime = 0, serialTimeoutStart = 0, waitTimer = 0; //used to calculate update time
@@ -272,6 +281,15 @@ void sendSensorDataWs(AsyncWebSocketClient * client){
   root["temp_coil"] = acValues.temp_coil;
   root["fan_rpm"] = acValues.fan_rpm;
   root["idle"] = acValues.idle;
+  root["powerful"] = acValues.powerful;
+  root["comfort"] = acValues.comfort;
+  root["quiet"] = acValues.quiet;
+  root["streamer"] = acValues.streamer;
+  root["sensor"] = acValues.sensor;
+  root["led"] = acValues.led;
+  root["demand"] = acValues.demand;
+  root["econo"] = acValues.econo;
+  root["wh"] = acValues.wh;
 
   size_t len = measureJson(root);
   AsyncWebSocketMessageBuffer * buffer = ws.makeBuffer(len); //  creates a buffer (len + 1) for you.
@@ -467,14 +485,23 @@ void write_frame(std::vector<uint8_t> frame) {
 
 void dumpState() {
   debugI("** BEGIN STATE *****************************");
-  debugI("  Power: %i", acValues.power_on);
-  debugI("   Mode: %s (%s)", mode_to_string(acValues.mode).c_str(), acValues.idle ? "idle" : "active");
-  debugI(" Target: %.1f C", acValues.setpoint / 10.0);
-  debugI("    Fan: %s (%d rpm)", speed_to_string(acValues.fan).c_str(), acValues.fan_rpm);
-  debugI("  Swing: H:%i V:%i", acValues.swing_h, acValues.swing_v);
-  debugI(" Inside: %.1f C", acValues.temp_inside / 10.0);
-  debugI("Outside: %.1f C", acValues.temp_outside / 10.0);
-  debugI("   Coil: %.1f C", acValues.temp_coil / 10.0);
+  debugI("   Power: %i", acValues.power_on);
+  debugI("    Mode: %s (%s)", mode_to_string(acValues.mode).c_str(), acValues.idle ? "idle" : "active");
+  debugI("  Target: %.1f C", acValues.setpoint / 10.0);
+  debugI("     Fan: %s (%d rpm)", speed_to_string(acValues.fan).c_str(), acValues.fan_rpm);
+  debugI("   Swing: H:%i V:%i", acValues.swing_h, acValues.swing_v);
+  debugI("  Inside: %.1f C", acValues.temp_inside / 10.0);
+  debugI(" Outside: %.1f C", acValues.temp_outside / 10.0);
+  debugI("    Coil: %.1f C", acValues.temp_coil / 10.0);
+  debugI("Powerful: %i", acValues.powerful);
+  debugI(" Comfort: %i", acValues.comfort);
+  debugI("   Quiet: %i", acValues.quiet);
+  debugI("Streamer: %i", acValues.streamer);
+  debugI("  Sensor: %i", acValues.sensor);
+  debugI("     Led: %i", acValues.led);
+  debugI("  Demand: %i", acValues.demand);
+  debugI("   Econo: %i", acValues.econo);
+  debugI("      Wh: %i", acValues.wh);
   debugI("** END STATE *****************************");
 }
 
@@ -513,6 +540,14 @@ bool mqttConnect() {
     //not even connected to wifi
     return false;
   }
+}
+
+static inline uint32_t
+s21_decode_hex_sensor (std::vector<uint8_t> payload)
+{
+#define hex(c)	(uint32_t)(((c)&0xF)+((c)>'9'?9:0))
+   return (hex (payload[5]) << 12) | (hex (payload[4]) << 8) | (hex (payload[3]) << 4) | hex (payload[2]);
+#undef hex
 }
 
 //header for remoteDebug callback function
@@ -714,6 +749,15 @@ void setup() {
         root["temp_coil"] = acValues.temp_coil;
         root["fan_rpm"] = acValues.fan_rpm;
         root["idle"] = acValues.idle;
+        root["powerful"] = acValues.powerful;
+        root["comfort"] = acValues.comfort;
+        root["quiet"] = acValues.quiet;
+        root["streamer"] = acValues.streamer;
+        root["sensor"] = acValues.sensor;
+        root["led"] = acValues.led;
+        root["demand"] = acValues.demand;
+        root["econo"] = acValues.econo;
+
         serializeJson(root, *response);
         request->send(response);
     }).setFilter(ON_STA_FILTER);
@@ -801,6 +845,15 @@ void loop() {
               root["temp_coil"] = acValues.temp_coil;
               root["fan_rpm"] = acValues.fan_rpm;
               root["idle"] = acValues.idle;
+              root["powerful"] = acValues.powerful;
+              root["comfort"] = acValues.comfort;
+              root["quiet"] = acValues.quiet;
+              root["streamer"] = acValues.streamer;
+              root["sensor"] = acValues.sensor;
+              root["led"] = acValues.led;
+              root["demand"] = acValues.demand;
+              root["econo"] = acValues.econo;
+              root["wh"] = acValues.wh;
             
               char buffer[512];
               serializeJson(root, buffer);
@@ -932,6 +985,66 @@ void loop() {
                 valueChanged = true;
               }
               debugD("V-Swing is %i, H-Swing is %i", acValues.swing_v, acValues.swing_h);
+              break;
+            case '6':  // F6 -> G6 -- Powerful & co
+              if ( acValues.powerful != (bool)(frameBytes[2] & 0x2) ){
+                debugD("Powerful changed from %i to %i", acValues.powerful, (bool)(frameBytes[2] & 0x2));
+                acValues.powerful = frameBytes[2] & 0x2;
+                valueChanged = true;
+              }
+              if ( acValues.comfort != (bool)(frameBytes[2] & 0x40) ){
+                debugD("Comfort changed from %i to %i", acValues.comfort, (bool)(frameBytes[2] & 0x40));
+                acValues.comfort = frameBytes[2] & 0x40;
+                valueChanged = true;
+              }
+              if ( acValues.quiet != (bool)(frameBytes[2] & 0x80) ){
+                debugD("Quiet changed from %i to %i", acValues.quiet, (bool)(frameBytes[2] & 0x80));
+                acValues.quiet = frameBytes[2] & 0x80;
+                valueChanged = true;
+              }
+              if ( acValues.streamer != (bool)(frameBytes[3] & 0x80) ){
+                debugD("Streamer changed from %i to %i", acValues.streamer, (bool)(frameBytes[3] & 0x80));
+                acValues.streamer = frameBytes[3] & 0x80;
+                valueChanged = true;
+              }
+              if ( acValues.sensor != (bool)(frameBytes[5] & 0x8) ){
+                debugD("Sensor changed from %i to %i", acValues.sensor, (bool)(frameBytes[5] & 0x8));
+                acValues.sensor = frameBytes[5] & 0x8;
+                valueChanged = true;
+              }
+              if ( acValues.led != (bool)(frameBytes[5] & 0xc != 0xc) ){
+                debugD("Led changed from %i to %i", acValues.led, (bool)(frameBytes[5] & 0xc != 0xc));
+                acValues.led = (frameBytes[5] & 0xc != 0xc);
+                valueChanged = true;
+              }
+              debugD("Powerful is %i", acValues.powerful);
+              debugD("Comfort is %i", acValues.comfort);
+              debugD("Quiet is %i", acValues.quiet);
+              debugD("Streamer is %i", acValues.streamer);
+              debugD("Sensor is %i", acValues.sensor);
+              debugD("Led is %i", acValues.led);
+              break;
+            case '7':  // F7 -> G7 -- Demand and economy
+              if ( acValues.demand!= 100 - (frameBytes[2] - '0') ){
+                debugD("Demand changed from %i to %i", acValues.demand, 100 - (frameBytes[2] - '0'));
+                acValues.demand = 100 - (frameBytes[2] - '0');
+                valueChanged = true;
+              }
+              if ( acValues.econo != (bool)(frameBytes[3] & 2) ){
+                debugD("Econo changed from %i to %i", acValues.econo, (bool)(frameBytes[3] & 2));
+                acValues.econo = frameBytes[3] & 2;
+                valueChanged = true;
+              }
+              debugD("Demand is %i", acValues.demand);
+              debugD("Econo is %i", acValues.econo);
+              break;
+            case 'M':  // FM -> GM -- Wh
+              if ( acValues.wh != s21_decode_hex_sensor(frameBytes) * 100){
+                debugD("Wh changed from %i to %i", acValues.wh, s21_decode_hex_sensor(frameBytes) * 100);
+                acValues.wh = s21_decode_hex_sensor(frameBytes) * 100;
+                valueChanged = true;
+              }
+              debugD("Wh is %i", acValues.wh);
               break;
           }
           break;
@@ -1285,7 +1398,92 @@ void loop() {
       //triggering send command
       cmdState = 1;
     }
-        
+
+    if ( wsMsg["command"].as<String>() == "acPowerful" ){
+      //powerful control command
+      debugD("Sending AC Powerful: %i", wsMsg["powerful"].as<bool>());
+
+      acCommand = {'D', '6',
+        (uint8_t) ('0' + (wsMsg["powerful"].as<bool>() ? 2 : 0) + (acValues.comfort ? 0x40 : 0) + (acValues.quiet ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.streamer ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.sensor ? 0x8 : 0)),
+        '0'
+      };
+      //triggering send command
+      cmdState = 1;
+    }
+
+    if ( wsMsg["command"].as<String>() == "acComfort" ){
+      //comfort control command
+      debugD("Sending AC Comfort: %i", wsMsg["comfort"].as<bool>());
+
+      acCommand = {'D', '6',
+        (uint8_t) ('0' + (acValues.powerful ? 2 : 0) + (wsMsg["comfort"].as<bool>() ? 0x40 : 0) + (acValues.quiet ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.streamer ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.sensor ? 0x8 : 0)),
+        '0'
+      };
+      //triggering send command
+      cmdState = 1;
+    }
+
+    if ( wsMsg["command"].as<String>() == "acQuiet" ){
+      //quiet control command
+      debugD("Sending AC Quiet: %i", wsMsg["quiet"].as<bool>());
+
+      acCommand = {'D', '6',
+        (uint8_t) ('0' + (acValues.powerful ? 2 : 0) + (acValues.comfort ? 0x40 : 0) + (wsMsg["quiet"].as<bool>() ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.streamer ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.sensor ? 0x8 : 0)),
+        '0'
+      };
+      //triggering send command
+      cmdState = 1;
+    }
+
+    if ( wsMsg["command"].as<String>() == "acStreamer" ){
+      //streamer control command
+      debugD("Sending AC Streamer: %i", wsMsg["streamer"].as<bool>());
+
+      acCommand = {'D', '6',
+        (uint8_t) ('0' + (acValues.powerful ? 2 : 0) + (acValues.comfort ? 0x40 : 0) + (acValues.quiet ? 0x80 : 0)),
+        (uint8_t) ('0' + (wsMsg["streamer"].as<bool>() ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.sensor ? 0x8 : 0)),
+        '0'
+      };
+      //triggering send command
+      cmdState = 1;
+    }
+
+    if ( wsMsg["command"].as<String>() == "acSensor" ){
+      //sensor control command
+      debugD("Sending AC Sensor: %i", wsMsg["sensor"].as<bool>());
+
+      acCommand = {'D', '6',
+        (uint8_t) ('0' + (acValues.powerful ? 2 : 0) + (acValues.comfort ? 0x40 : 0) + (acValues.quiet ? 0x80 : 0)),
+        (uint8_t) ('0' + (acValues.streamer ? 0x80 : 0)),
+        (uint8_t) ('0' + (wsMsg["sensor"].as<bool>() ? 0x8 : 0)),
+        '0'
+      };
+      //triggering send command
+      cmdState = 1;
+    }
+
+    if ( wsMsg["command"].as<String>() == "acEcono" ){
+      //sensor control command
+      debugD("Sending AC Econo: %i", wsMsg["econo"].as<bool>());
+
+      acCommand = {'D', '7',
+        (uint8_t) ('0' + 100 - acValues.demand),
+        (uint8_t) ('0' + (wsMsg["sensor"].as<bool>() ? 2 : 0)),
+        '0',
+        '0'
+      };
+      //triggering send command
+      cmdState = 1;
+    }
+
+
     //clear the ws message - null terminate the first array element
     wsTxt[0] = '\0';
   }
@@ -1376,6 +1574,15 @@ void processCmdRemoteDebug(){
     debugA("  int16_t temp_coil = %i;", acValues.temp_coil);
     debugA("  uint16_t fan_rpm = %i;", acValues.fan_rpm);
     debugA("  bool idle = %i;", acValues.idle);
+    debugA("  bool powerful = %i;", acValues.powerful);
+    debugA("  bool comfort = %i;", acValues.comfort);
+    debugA("  bool quiet = %i;", acValues.quiet);
+    debugA("  bool streamer = %i;", acValues.streamer);
+    debugA("  bool sensor = %i;", acValues.sensor);
+    debugA("  bool led = %i;", acValues.led);
+    debugA("  int16_t demand = %i;", acValues.demand);
+    debugA("  bool econo = %i;", acValues.econo);
+    debugA("  uint32_t wh = %i;", acValues.wh);
     debugA("} acValues;");
   }
 }
