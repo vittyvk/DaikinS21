@@ -151,7 +151,7 @@ $( document ).ready(function() {
 		//and sending
 		var json_arr = {};
 		json_arr["command"] = "acTemp";
-		json_arr["temp"] = $('.target-temp').text().slice(0, -2).trim();
+		json_arr["temp"] = Number($('.target-temp').text().slice(0, -2).trim()) * 10;
 
 		ws.send(JSON.stringify(json_arr));	
 

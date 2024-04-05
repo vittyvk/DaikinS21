@@ -106,6 +106,7 @@ mqtt
       max_temp: 32
       min_temp: 18
       precision: 0.5
+      temp_step: 0.5
       swing_modes: ["Full swing", "Only horizontal", "Only vertical", "No swing"]
       swing_mode_state_topic: "your/data/topic"
       swing_mode_state_template: >-

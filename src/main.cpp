@@ -1362,7 +1362,7 @@ void loop() {
       acCommand = {'D', '1',
         (uint8_t)(acValues.power_on ? '1' : '0'),
         (uint8_t) acValues.mode,
-        c10_to_setpoint_byte(wsMsg["temp"].as<int16_t>() * 10),
+        c10_to_setpoint_byte(wsMsg["temp"].as<int16_t>()),
         (uint8_t) acValues.fan
       };
 
