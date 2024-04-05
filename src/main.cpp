@@ -53,7 +53,7 @@ const char* apname = "WiFi-daikin"; //name used for config AP when wifi is not f
 
 //ac variables
 const uint8_t modes[6] = {'1','2','3','4','6'}; // auto, dry, cool, heat, fan -> in ASCII 49 50 51 52 54
-const uint8_t speeds[6] = {'A','3','4','5','6','7'}; //auto and speed from 1 to 5 -> in ASCII 65 51 52 53 54 55
+const uint8_t speeds[7] = {'A','3','4','5','6','7','B'}; //auto and speed from 1 to 5, then B -> in ASCII 65 51 52 53 54 55 66
 std::uint8_t modeToChar (uint8_t mode){
   switch (mode){
     case 49:
@@ -84,6 +84,8 @@ std::uint8_t fanToChar (uint8_t speed){
       return speeds[4];
     case 55:
       return speeds[5];
+    case 66:
+      return speeds[6];
     default:
       return 0;
   }
@@ -121,6 +123,8 @@ std::string speed_to_string(uint8_t mode) {
       return "4";
     case '7':
       return "5";
+    case 'B':
+      return "Quiet";
     default:
       return "UNKNOWN";
   }
@@ -1079,6 +1083,11 @@ void loop() {
                 debugD("Fan RPM changed from %i to %i", acValues.fan_rpm, (bytes_to_num(&frameBytes[2], frameBytes.size()-2) * 10));
                 acValues.fan_rpm = bytes_to_num(&frameBytes[2], frameBytes.size()-2) * 10;
                 valueChanged = true;
+
+                // Fan:quiet
+                if (acValues.fan == 65 && acValues.power_on && acValues.fan_rpm > 0 && acValues.fan_rpm < 750) {
+                  acValues.fan = 66;
+                }
               }
               debugD("Fan rpm is %i", acValues.fan_rpm);
               break;
