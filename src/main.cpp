@@ -1083,11 +1083,6 @@ void loop() {
                 debugD("Fan RPM changed from %i to %i", acValues.fan_rpm, (bytes_to_num(&frameBytes[2], frameBytes.size()-2) * 10));
                 acValues.fan_rpm = bytes_to_num(&frameBytes[2], frameBytes.size()-2) * 10;
                 valueChanged = true;
-
-                // Fan:quiet
-                if (acValues.fan == 65 && acValues.power_on && acValues.fan_rpm > 0 && acValues.fan_rpm < 750) {
-                  acValues.fan = 66;
-                }
               }
               debugD("Fan rpm is %i", acValues.fan_rpm);
               break;
